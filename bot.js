@@ -1,6 +1,6 @@
 require('dotenv').config();
 const keepAlive = require('./server.js');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { REST, Routes } = require('discord.js');
 const { MongoClient, ObjectId } = require('mongodb');
 const buildPath = require('./buildPath.js');
@@ -300,7 +300,7 @@ client.on('interactionCreate', async (interaction) => {
 
 // Scheduled to check for tasks due every morning at 6am
 // cron.schedule('0 6 * * *', async () => {  
-cron.schedule('*/10 * * * * *', async () => {
+cron.schedule('*/30 * * * * *', async () => {
     console.log("CRON.SCHEDULE...");
     // const index = 0;
     const currentDate = new Date();
@@ -322,6 +322,7 @@ cron.schedule('*/10 * * * * *', async () => {
     dayMark1.setDate(currentDate.getDate() + 1);
     dayMark1.setUTCHours(0, 0, 0, 0);
 
+    // Runs through every server in order to sned reminders
     for (const guildId of botGuildIds) {
         const projects = [];
 
@@ -331,6 +332,8 @@ cron.schedule('*/10 * * * * *', async () => {
 
         // console.log(projects[index].tasks);
 
+        // Runs through each project for all the projects added
+        // to the specific guild/server
         for (const project of projects) {
             const tasksDueIn7Days = [];
             const tasksDueIn5Days = [];
@@ -349,6 +352,8 @@ cron.schedule('*/10 * * * * *', async () => {
 
             const tasks = await response.json();
 
+            // Gets all tasks for current project and inserts
+            // them into their respective due date arrays
             for(const task of tasks) {
                 const dueDate = new Date(task.dueDateTime);
 
@@ -373,11 +378,33 @@ cron.schedule('*/10 * * * * *', async () => {
                     tasksDueIn1Day.push(task);
                 }
             }
+            
+            // Compose and send message to user for all of the
+            // different task due date lengths
 
+            const day7embed = new EmbedBuilder()
+                .setTitle('📢 Daily Reminder')
+                .setDescription(`Project: ${project.nameProject}`)
+                .setColor(0x00AE86)
+                .setTimestamp();
 
+            const day5embed = new EmbedBuilder()
+                .setColor(0x00AE86)
+                .setTimestamp();
+            
+            const day3embed = new EmbedBuilder()
+                .setColor(0x00AE86)
+                .setTimestamp();
+
+            const day1embed = new EmbedBuilder()
+                .setColor(0x00AE86)
+                .setFooter({ text: 'Have a great day!' })
+                .setTimestamp();
 
             for(const task of tasksDueIn7Days){
-
+                day7embed.addFields(
+                    { name: '🕒 Time', value: '9 AM Every Day', inline: true },
+                )
             }
 
             // console.log(tasksDueIn7Days);
