@@ -11,7 +11,20 @@ const { DISCORD_TOKEN, CLIENT_ID, MONGODB_URI, PORT } = process.env;
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const guildReminderSelections = {};
 const botGuildIds = new Set();
+const botChannelIds = {};
 const projectsAddedToServers = {};
+
+function ensureDate(value) {
+    if (value instanceof Date) {
+      return value;
+    }
+    const date = new Date(value);
+    if (!isNaN(date)) {
+      return date;
+    } else {
+      throw new Error("Invalid date value provided");
+    }
+}
 
 // let mongoClient;
 
@@ -67,6 +80,18 @@ const commands = [
         name: 'setreminders',
         description: 'Sets how long before a task you would like to be reminded',
     },
+    {
+        name: 'setchannel',
+        description: 'Sets the bot’s main messaging channel',
+        options: [
+            {
+                type: 7, // Channel type (7 is for channels)
+                name: 'channel',
+                description: 'Select the channel for bot messages',
+                required: true,
+            },
+        ],
+    },
 ];
 
 // Register Slash Commands
@@ -93,7 +118,68 @@ client.once('ready', async () => {
     guilds.forEach((guild) => {
         botGuildIds.add(guild.id);
     });
+
+    client.guilds.cache.forEach((guild) => {
+        const channelsInGuild = [];
+
+        // Iterate through the channels in each guild
+        guild.channels.cache.forEach((channel) => {
+            // Check if the bot is in the channel and it's a text channel
+            if (channel.type === 'GUILD_TEXT' && guild.members.cache.has(client.user.id)) {
+                channelsInGuild.push(channel.id);  // Collect channel ID
+            }
+        });
+
+        // If the bot is in any channel in this guild, store the IDs
+        if (channelsInGuild.length > 0) {
+            guildChannels[guild.id] = channelsInGuild;
+            console.log(`Guild ${guild.name} has the following channels:`);
+            console.log(guildChannels[guild.id]);  // Show collected channel IDs for the guild
+        }
+    });
+
     console.log(`Logged in as ${client.user.tag}!`);
+});
+
+client.on('guildDelete', (guild) => {
+    // Check if the guild ID exists in botChannelIds
+    if (botChannelIds[guild.id]) {
+        delete botChannelIds[guild.id]; // Remove the stored channel ID(s)
+        console.log(`Bot was removed from guild: ${guild.name} (${guild.id}). Cleared stored channel data: `, botChannelIds[guild.id]);
+    }
+});
+
+client.on('guildCreate', async (guild) => {
+    try {
+        // Get the system channel (where system messages like bot joins are sent)
+        let channelId = guild.systemChannelId;
+
+        // If the system channel isn't set or bot lacks permission, find the first text channel the bot can send messages in
+        if (!channelId) {
+            const channels = await guild.channels.fetch();
+            const textChannel = channels.find(
+                (channel) => 
+                    (channel.type === 0 || channel.type === 5) &&
+                    channel.permissionsFor(guild.members.me).has('SendMessages')
+            );
+
+            if (textChannel) {
+                channelId = textChannel.id;
+            }
+        }
+
+        botChannelIds[guild.id] = [channelId];
+        console.log("Channel ID:", botChannelIds[guild.id]);
+        
+
+        // if (channelId) {
+        //     console.log(`Bot was added in channel: ${channelId}`);
+        // } else {
+        //     console.log("No suitable channel found.");
+        // }
+    } catch (error) {
+        console.error(`Error fetching channels: ${error}`);
+    }
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -104,6 +190,30 @@ client.on('interactionCreate', async (interaction) => {
 
             if (commandName === 'ping') {
                 await interaction.reply('Pong!');
+            }
+
+            if (commandName === 'setchannel') {
+                const { customId, guildId } = interaction;
+                const value = customId;
+                const selectedChannel = interaction.options.getChannel('channel');
+                const channelId = selectedChannel.id;
+
+                if (!selectedChannel || !(selectedChannel.type === 0 || selectedChannel.type === 5)) {
+                    return interaction.reply({ content: 'Please select a valid text or news channel.'});
+                }
+
+                if (!selectedChannel.permissionsFor(interaction.guild.members.me).has('SEND_MESSAGES')) {
+                    return interaction.reply({ content: 'I do not have permission to send messages in that channel.'});
+                }
+
+                if (botChannelIds[guildId]) {
+                    delete botChannelIds[guildId];
+                    // console.log(`Bot was removed from guild: (${guildId}). Cleared stored channel data: `, botChannelIds[guildId]);
+                }
+
+                botChannelIds[guildId] = channelId;
+                // console.log("botChannelIds[guildId] = ", botChannelIds[guildId]);
+                await interaction.reply('Channel Selected!');
             }
 
             // Set Reminders Command
@@ -242,26 +352,35 @@ cron.schedule('*/10 * * * * *', async () => {
             for(const task of tasks) {
                 const dueDate = new Date(task.dueDateTime);
 
-                console.log("dueDate: ", dueDate);
-                console.log("currentDate: ", currentDate);
-                console.log("dayMark7: ", dayMark7);
+                // console.log("dueDate: ", dueDate);
+                // console.log("currentDate: ", currentDate);
+                // console.log("dayMark7: ", dayMark7);
 
                 if (dueDate.getTime() === dayMark7.getTime()) {
                     console.log("Task is due in 7 days...");
                     tasksDueIn7Days.push(task);
-                }                
-                if(){
-
                 }
-                if(){
-
+                if (dueDate.getTime() === dayMark5.getTime()) {
+                    console.log("Task is due in 5 days...");
+                    tasksDueIn5Days.push(task);
                 }
-                if(){
-
+                if (dueDate.getTime() === dayMark3.getTime()) {
+                    console.log("Task is due in 3 days...");
+                    tasksDueIn3Days.push(task);
+                }
+                if (dueDate.getTime() === dayMark1.getTime()) {
+                    console.log("Task is due in 1 days...");
+                    tasksDueIn1Day.push(task);
                 }
             }
 
-            console.log(tasksDueIn7Days);
+
+
+            for(const task of tasksDueIn7Days){
+
+            }
+
+            // console.log(tasksDueIn7Days);
             
         }
 
