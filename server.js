@@ -29,7 +29,7 @@ server.all(`/`, (req, res) => {
 
 function keepAlive() {
     server.listen(PORT, () => {
-        console.log("Server is now ready! - ", new Date());
+        console.log("Server is now ready!");
     });
 }
 

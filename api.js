@@ -5,21 +5,12 @@ require("dotenv").config();
 const url = process.env.MONGODB_URI;
 const file = require("fs");
 
-const savePath = "./csfle-master-key.txt";
-const masterLocalKey = file.readFileSync(savePath);
-const kmsProviders = {
-  local: {key: masterLocalKey,},
-};
-
-const keyVaultNamespace = "encrypt_database.key_collection";
-const keyId = "<NmIBCKRwRLKW2HQLrNEtsw==>";
-
 const router = express.Router();
 
 let client;
 (async () => {
   try {
-    client = new MongoClient(url, {autoEncryption: {keyVaultNamespace, kmsProviders, bypassAutoEncryption: true, bypassQueryAnalysis: true}});
+    client = new MongoClient(url);
     await client.connect();
     console.log("Connected to MongoDB");
   } catch (err) {
