@@ -168,7 +168,7 @@ client.on('guildCreate', async (guild) => {
             }
         }
 
-        botChannelIds[guild.id] = [channelId];
+        botChannelIds[guild.id] = channelId;
         console.log("Channel ID:", botChannelIds[guild.id]);
         
 
@@ -253,7 +253,7 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 const project = await response.json();
 
-                console.log(project);
+                // console.log(project);
                 projectsAddedToServers[guildId].add(project);
 
 
@@ -344,7 +344,7 @@ cron.schedule('*/30 * * * * *', async () => {
 
             const tasksArray = project.tasks;
 
-            console.log(tasksArray);
+            // console.log(tasksArray);
 
             const response = await fetch(buildPath(`api/getTasksById/${tasksArray}`), {
                 method: 'GET',
@@ -365,50 +365,80 @@ cron.schedule('*/30 * * * * *', async () => {
                     console.log("Task is due in 7 days...");
                     tasksDueIn7Days.push(task);
                 }
-                if (dueDate.getTime() === dayMark5.getTime()) {
-                    console.log("Task is due in 5 days...");
-                    tasksDueIn5Days.push(task);
-                }
-                if (dueDate.getTime() === dayMark3.getTime()) {
-                    console.log("Task is due in 3 days...");
-                    tasksDueIn3Days.push(task);
-                }
-                if (dueDate.getTime() === dayMark1.getTime()) {
-                    console.log("Task is due in 1 days...");
-                    tasksDueIn1Day.push(task);
-                }
+                // if (dueDate.getTime() === dayMark5.getTime()) {
+                //     console.log("Task is due in 5 days...");
+                //     tasksDueIn5Days.push(task);
+                // }
+                // if (dueDate.getTime() === dayMark3.getTime()) {
+                //     console.log("Task is due in 3 days...");
+                //     tasksDueIn3Days.push(task);
+                // }
+                // if (dueDate.getTime() === dayMark1.getTime()) {
+                //     console.log("Task is due in 1 days...");
+                //     tasksDueIn1Day.push(task);
+                // }
             }
             
             // Compose and send message to user for all of the
             // different task due date lengths
 
-            const day7embed = new EmbedBuilder()
-                .setTitle('📢 Daily Reminder')
-                .setDescription(`Project: ${project.nameProject}`)
-                .setColor(0x00AE86)
-                .setTimestamp();
-
-            const day5embed = new EmbedBuilder()
-                .setColor(0x00AE86)
-                .setTimestamp();
-            
-            const day3embed = new EmbedBuilder()
-                .setColor(0x00AE86)
-                .setTimestamp();
-
-            const day1embed = new EmbedBuilder()
-                .setColor(0x00AE86)
+            const embed = new EmbedBuilder()
+                .setDescription(`# 📢 **Daily Reminder**\n\n## Project: ${project.nameProject}`)
+                // .setDescription(`# Project: ${project.nameProject}`)
+                .setColor(0xFDDC87)
                 .setFooter({ text: 'Have a great day!' })
                 .setTimestamp();
 
-            for(const task of tasksDueIn7Days){
-                day7embed.addFields(
-                    { name: '🕒 Time', value: '9 AM Every Day', inline: true },
-                )
-            }
+                console.log("adding fields ");
+
+                for (const task of tasksDueIn7Days) {
+                    embed.addFields(
+                        { 
+                            name: `Task: ${task.taskTitle}`, 
+                            value: (task.taskDescription === "") 
+                                ? "No Task Description...\nDue in 7 days" 
+                                : `${task.taskDescription}\nDue in 7 days`, 
+                            inline: true 
+                        }
+                    );
+                }
+                
+
+            // for(const task of tasksDueIn5Days){
+            //     day5embed.addFields(
+            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 5 days', inline: true },
+            //     );
+            // }
+
+            // for(const task of tasksDueIn3Days){
+            //     day3embed.addFields(
+            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 3 days', inline: true },
+            //     );
+            // }
+
+            // for(const task of tasksDueIn1Day){
+            //     day1embed.addFields(
+            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 1 day', inline: true },
+            //     );
+            // }
 
             // console.log(tasksDueIn7Days);
-            
+
+            console.log("embed: ", embed);
+
+            try{
+                const guild = await client.guilds.fetch(guildId).catch(() => null);
+                console.log("Guild: ", guild);
+                console.log("botChannelIds[guildId]: ", botChannelIds[guildId]);
+                const channel = await guild.channels.fetch(botChannelIds[guildId]).catch(() => null);
+                // console.log("channel: ", channel);
+
+                await channel.send({ embeds: [embed] });
+                console.log(`Message sent to guild ${guildId} in channel ${botChannelIds[guildId]}`);
+            }
+            catch(error){
+                console.error(`Failed to send message to guild ${guildId}:`, error);
+            }
         }
 
         // index++;
