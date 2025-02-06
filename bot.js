@@ -14,20 +14,6 @@ const botGuildIds = new Set();
 const botChannelIds = {};
 const projectsAddedToServers = {};
 
-function ensureDate(value) {
-    if (value instanceof Date) {
-      return value;
-    }
-    const date = new Date(value);
-    if (!isNaN(date)) {
-      return date;
-    } else {
-      throw new Error("Invalid date value provided");
-    }
-}
-
-// let mongoClient;
-
 function getActionRows(userSelections = []) {
     const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
     const row = [];
@@ -77,7 +63,7 @@ const commands = [
         description: 'prints projects',
     },
     {
-        name: 'setreminders',
+        name: 'remindertime',
         description: 'Sets how long before a task you would like to be reminded',
     },
     {
@@ -85,7 +71,7 @@ const commands = [
         description: 'Sets the bot’s main messaging channel',
         options: [
             {
-                type: 7, // Channel type (7 is for channels)
+                type: 7,
                 name: 'channel',
                 description: 'Select the channel for bot messages',
                 required: true,
@@ -158,7 +144,7 @@ client.on('guildCreate', async (guild) => {
         if (!channelId) {
             const channels = await guild.channels.fetch();
             const textChannel = channels.find(
-                (channel) => 
+                (channel) =>
                     (channel.type === 0 || channel.type === 5) &&
                     channel.permissionsFor(guild.members.me).has('SendMessages')
             );
@@ -168,15 +154,22 @@ client.on('guildCreate', async (guild) => {
             }
         }
 
-        botChannelIds[guild.id] = channelId;
-        console.log("Channel ID:", botChannelIds[guild.id]);
-        
+        const message = `Thank you for using the Ganttify Discord Companion Bot, please read the following to make sure you get the best out of our Discord Bot.\n\nThis bot requires you to set the channel which you would like to recieve messages in. You can set the preffered channel by using the /setchannel command.\n\nNext, this bot allows you to set the preffered amount of time for upcoming task due dates which the bot will remind you of by using the /remindertime command.\n\nLastly, in order to be reminded about upcoming due dates for tasks, you must add which projects you wish to be reminded about. In order to do this, you can use the /addproject command. This command requires you to provide the bot with the invitation link for the specific project. This link can be found in the invite members page within said project.\nThank you,\n\t
+                                -Ganttify Team`;
 
-        // if (channelId) {
-        //     console.log(`Bot was added in channel: ${channelId}`);
-        // } else {
-        //     console.log("No suitable channel found.");
-        // }
+        const welcomeMessage = new EmbedBuilder()
+            .setTitle("Hello!")
+            .setDescription(message)
+            .setColor(0xFDDC87)
+            .setFooter({ text: 'Have a great day!' })
+            .setTimestamp();
+
+        const guildId = guild.id;
+        const channel = await guild.channels.fetch(channelId).catch(() => null);
+
+        await channel.send({ embeds: [welcomeMessage] });
+
+        botChannelIds[guild.id] = channelId;
     } catch (error) {
         console.error(`Error fetching channels: ${error}`);
     }
@@ -187,10 +180,6 @@ client.on('interactionCreate', async (interaction) => {
         // If the interaction is a slash command
         if (interaction.isChatInputCommand()) {
             const { commandName } = interaction;
-
-            if (commandName === 'ping') {
-                await interaction.reply('Pong!');
-            }
 
             if (commandName === 'setchannel') {
                 const { customId, guildId } = interaction;
@@ -208,22 +197,18 @@ client.on('interactionCreate', async (interaction) => {
 
                 if (botChannelIds[guildId]) {
                     delete botChannelIds[guildId];
-                    // console.log(`Bot was removed from guild: (${guildId}). Cleared stored channel data: `, botChannelIds[guildId]);
                 }
 
                 botChannelIds[guildId] = channelId;
-                // console.log("botChannelIds[guildId] = ", botChannelIds[guildId]);
                 await interaction.reply('Channel Selected!');
             }
 
             // Set Reminders Command
-            if (commandName === 'setreminders') {
+            if (commandName === 'remindertime') {
                 const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
                 const { customId, guildId } = interaction;
 
-                // console.log("guildId = ", guildId);
                 const value = customId;
-                // const row = [];
 
                 if (!guildReminderSelections[guildId]) {
                     guildReminderSelections[guildId] = [];
@@ -243,8 +228,7 @@ client.on('interactionCreate', async (interaction) => {
                     projectsAddedToServers[guildId] = new Set();
                 }
                 
-                const inviteLink = interaction.options.getString('invite_link');  // Collect the input value
-                // projectsAddedToServers[guildId].add(inviteLink);
+                const inviteLink = interaction.options.getString('invite_link');
 
                 const encodedInviteLink = encodeURIComponent(inviteLink);
 
@@ -253,11 +237,7 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 const project = await response.json();
 
-                // console.log(project);
                 projectsAddedToServers[guildId].add(project);
-
-
-                // console.log("projectsAddedToServers[guildId]: ", projectsAddedToServers[guildId]);
                 
                 // https://ganttify-5b581a9c8167.herokuapp.com/join-project/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI2Nzk4M2ZhOTVmYzUzZDk4OWUwNWVlNDMiLCJpYXQiOjE3MzgwMzEwMTd9.BVhhsusXha82RqFF4q_zozuVMjd-t-XHtzfvr6GsEE0
                 await interaction.reply({
@@ -302,7 +282,6 @@ client.on('interactionCreate', async (interaction) => {
 // cron.schedule('0 6 * * *', async () => {  
 cron.schedule('*/30 * * * * *', async () => {
     console.log("CRON.SCHEDULE...");
-    // const index = 0;
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
@@ -330,8 +309,6 @@ cron.schedule('*/30 * * * * *', async () => {
 
         projects.push(...guildProjects);
 
-        // console.log(projects[index].tasks);
-
         // Runs through each project for all the projects added
         // to the specific guild/server
         for (const project of projects) {
@@ -340,11 +317,7 @@ cron.schedule('*/30 * * * * *', async () => {
             const tasksDueIn3Days = [];
             const tasksDueIn1Day = [];
 
-            // console.log(project.tasks);
-
             const tasksArray = project.tasks;
-
-            // console.log(tasksArray);
 
             const response = await fetch(buildPath(`api/getTasksById/${tasksArray}`), {
                 method: 'GET',
@@ -357,91 +330,110 @@ cron.schedule('*/30 * * * * *', async () => {
             for(const task of tasks) {
                 const dueDate = new Date(task.dueDateTime);
 
-                // console.log("dueDate: ", dueDate);
-                // console.log("currentDate: ", currentDate);
-                // console.log("dayMark7: ", dayMark7);
-
                 if (dueDate.getTime() === dayMark7.getTime()) {
-                    console.log("Task is due in 7 days...");
                     tasksDueIn7Days.push(task);
                 }
-                // if (dueDate.getTime() === dayMark5.getTime()) {
-                //     console.log("Task is due in 5 days...");
-                //     tasksDueIn5Days.push(task);
-                // }
-                // if (dueDate.getTime() === dayMark3.getTime()) {
-                //     console.log("Task is due in 3 days...");
-                //     tasksDueIn3Days.push(task);
-                // }
-                // if (dueDate.getTime() === dayMark1.getTime()) {
-                //     console.log("Task is due in 1 days...");
-                //     tasksDueIn1Day.push(task);
-                // }
+                if (dueDate.getTime() === dayMark5.getTime()) {
+                    tasksDueIn5Days.push(task);
+                }
+                if (dueDate.getTime() === dayMark3.getTime()) {
+                    tasksDueIn3Days.push(task);
+                }
+                if (dueDate.getTime() === dayMark1.getTime()) {
+                    tasksDueIn1Day.push(task);
+                }
             }
             
             // Compose and send message to user for all of the
             // different task due date lengths
-
             const embed = new EmbedBuilder()
-                .setDescription(`# 📢 **Daily Reminder**\n\n## Project: ${project.nameProject}`)
+                .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
                 // .setDescription(`# Project: ${project.nameProject}`)
                 .setColor(0xFDDC87)
-                .setFooter({ text: 'Have a great day!' })
+                // .setFooter({ text: 'Have a great day!' })
                 .setTimestamp();
 
-                console.log("adding fields ");
+                // Add the tasks for each amount of days that the user has selected to be reminded for
+                // 7 Days
+                if(guildReminderSelections[guildId].includes("7 Days Before")){
 
-                for (const task of tasksDueIn7Days) {
-                    embed.addFields(
-                        { 
-                            name: `Task: ${task.taskTitle}`, 
-                            value: (task.taskDescription === "") 
-                                ? "No Task Description...\nDue in 7 days" 
-                                : `${task.taskDescription}\nDue in 7 days`, 
-                            inline: true 
-                        }
-                    );
+                    embed.addFields({name: `__**Tasks Due in 7 Days:**__`, value: ` `});
+
+                    for (const task of tasksDueIn7Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 7 days\n\n"
+                                    : `${task.taskDescription}\nDue in 7 days\n\n`
+                            }
+                        );
+                    }
+    
                 }
-                
 
-            // for(const task of tasksDueIn5Days){
-            //     day5embed.addFields(
-            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 5 days', inline: true },
-            //     );
-            // }
+                // 5 Days
+                if(guildReminderSelections[guildId].includes("5 Days Before")){
 
-            // for(const task of tasksDueIn3Days){
-            //     day3embed.addFields(
-            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 3 days', inline: true },
-            //     );
-            // }
+                    embed.addFields({name: `__**Tasks Due in 5 Days:**__`, value: ` `});
 
-            // for(const task of tasksDueIn1Day){
-            //     day1embed.addFields(
-            //         { name: `Task: ${task.taskTitle}`, value: 'Due in 1 day', inline: true },
-            //     );
-            // }
+                    for (const task of tasksDueIn5Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 5 days\n\n"
+                                    : `${task.taskDescription}\nDue in 5 days\n\n`
+                            }
+                        );
+                    }
+                }
 
-            // console.log(tasksDueIn7Days);
+                // 3 Days
+                if(guildReminderSelections[guildId].includes("3 Days Before")){
 
-            console.log("embed: ", embed);
+                embed.addFields({name: `__**Tasks Due in 3 Days:**__`, value: ` `});
 
+                    for (const task of tasksDueIn3Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 3 days\n\n"
+                                    : `${task.taskDescription}\nDue in 3 days\n\n`
+                            }
+                        );
+                    }
+                }
+
+                // 1 Day
+                if(guildReminderSelections[guildId].includes("1 Day Before")){
+
+                    embed.addFields({name: `__**Tasks Due in 1 Day:**__`, value: ` `});
+
+                    for (const task of tasksDueIn1Day) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 1 day\n\n"
+                                    : `${task.taskDescription}\nDue in 1 day\n\n`
+                            }
+                        );
+                    }
+                }
+
+            // Send the message to the channel that has been selected
             try{
                 const guild = await client.guilds.fetch(guildId).catch(() => null);
-                console.log("Guild: ", guild);
-                console.log("botChannelIds[guildId]: ", botChannelIds[guildId]);
                 const channel = await guild.channels.fetch(botChannelIds[guildId]).catch(() => null);
-                // console.log("channel: ", channel);
 
                 await channel.send({ embeds: [embed] });
-                console.log(`Message sent to guild ${guildId} in channel ${botChannelIds[guildId]}`);
             }
             catch(error){
                 console.error(`Failed to send message to guild ${guildId}:`, error);
             }
         }
-
-        // index++;
     }
 });
 
