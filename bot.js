@@ -83,18 +83,18 @@ const commands = [
 // Register Slash Commands
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
-(async () => {
+async function registerCommands(guildId){
     try {
         console.log('Refreshing slash commands...');
         await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, '1333851032295440556'),
+            Routes.applicationGuildCommands(CLIENT_ID, guildId),
             { body: commands }
         );
         console.log('Slash commands registered.');
     } catch (error) {
         console.error('Error registering commands:', error);
     }
-})();
+}
 
 
 
@@ -136,6 +136,9 @@ client.on('guildDelete', (guild) => {
 });
 
 client.on('guildCreate', async (guild) => {
+    // Register the commands whenever the bot gets added to a guild/server
+    registerCommands(guild.Id);
+
     try {
         // Get the system channel (where system messages like bot joins are sent)
         let channelId = guild.systemChannelId;
@@ -239,7 +242,6 @@ client.on('interactionCreate', async (interaction) => {
 
                 projectsAddedToServers[guildId].add(project);
                 
-                // https://ganttify-5b581a9c8167.herokuapp.com/join-project/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI2Nzk4M2ZhOTVmYzUzZDk4OWUwNWVlNDMiLCJpYXQiOjE3MzgwMzEwMTd9.BVhhsusXha82RqFF4q_zozuVMjd-t-XHtzfvr6GsEE0
                 await interaction.reply({
                     content: 'Thank you, your project has been added!',
                 });
@@ -279,8 +281,7 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Scheduled to check for tasks due every morning at 6am
-// cron.schedule('0 6 * * *', async () => {  
-cron.schedule('*/30 * * * * *', async () => {
+cron.schedule('0 10 * * *', async () => {  
     console.log("CRON.SCHEDULE...");
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
