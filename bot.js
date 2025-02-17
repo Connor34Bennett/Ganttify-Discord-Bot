@@ -45,10 +45,6 @@ function getActionRows(userSelections = []) {
 // Slash Command Definitions
 const commands = [
     {
-        name: 'ping',
-        description: 'Replies with Pong!',
-    },
-    {
         name: 'addproject',
         description: 'Loads project for bot',
         options: [
@@ -59,10 +55,6 @@ const commands = [
                 required: true,
             },
         ],
-    },
-    {
-        name: 'print',
-        description: 'prints projects',
     },
     {
         name: 'remindertime',
