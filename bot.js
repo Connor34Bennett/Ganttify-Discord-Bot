@@ -8,7 +8,9 @@ const cron = require('node-cron');
 
 const { DISCORD_TOKEN, CLIENT_ID, MONGODB_URI, PORT } = process.env;
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+});
 const guildReminderSelections = {};
 const botGuildIds = new Set();
 const botChannelIds = {};
@@ -137,7 +139,7 @@ client.on('guildDelete', (guild) => {
 
 client.on('guildCreate', async (guild) => {
     // Register the commands whenever the bot gets added to a guild/server
-    registerCommands(guild.Id);
+    const test = registerCommands(guild.id);
 
     try {
         // Get the system channel (where system messages like bot joins are sent)
