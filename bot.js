@@ -16,8 +16,6 @@ const botGuildIds = new Set();
 const botChannelIds = {};
 const projectsAddedToServers = {};
 
-const MAX_FIELDS_PER_EMBED = 25;
-
 function getActionRows(userSelections = []) {
     const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
     const row = [];
@@ -244,11 +242,18 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 const project = await response.json();
 
-                projectsAddedToServers[guildId].add(project);
+                if(project){
+                    projectsAddedToServers[guildId].add(project);
                 
-                await interaction.reply({
-                    content: 'Thank you, your project has been added!',
-                });
+                    await interaction.reply({
+                        content: 'Thank you, your project has been added!',
+                    });
+                }
+                else{
+                    await interaction.reply({
+                        content: 'Sorry, there was an issue while adding your project.',
+                    });
+                }
 
             }
         } 
@@ -284,29 +289,8 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-function splitTasksIntoChunks(tasks, maxFields) {
-    const chunks = [];
-    let currentChunk = [];
-    
-    tasks.forEach((task, index) => {
-        if (currentChunk.length === maxFields) {
-            chunks.push(currentChunk);
-            currentChunk = [];
-        }
-        currentChunk.push(task);
-    });
-
-    if (currentChunk.length > 0) {
-        chunks.push(currentChunk);
-    }
-
-    return chunks;
-}
-
-
-// Scheduled to check for tasks due every morning at 6am
-// cron.schedule('0 10 * * *', async () => {  
-cron.schedule('* * * * *', async () => {  
+// Scheduled to check for tasks due every morning at 10am UTC
+cron.schedule('0 10 * * *', async () => {  
     console.log("CRON.SCHEDULE...");
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
@@ -330,7 +314,6 @@ cron.schedule('* * * * *', async () => {
     // Runs through every server in order to send reminders
     for (const guildId of botGuildIds) {
         const projects = [];
-        const chunks = [];
 
         const guildProjects = [...projectsAddedToServers[guildId]];
 
@@ -356,187 +339,116 @@ cron.schedule('* * * * *', async () => {
             // them into their respective due date arrays
             for(const task of tasks) {
                 const dueDate = new Date(task.dueDateTime.split('T')[0]);
+                const dayMark7Str = dayMark7.toISOString().split('T')[0];
+                const dayMark5Str = dayMark5.toISOString().split('T')[0];
+                const dayMark3Str = dayMark3.toISOString().split('T')[0];
+                const dayMark1Str = dayMark1.toISOString().split('T')[0];
 
-                if ((dueDate.getTime() === dayMark7.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("7 Days Before"))) {
+
+                console.log("dayMark7: ", dayMark7);
+
+                if (dueDate.toISOString().split('T')[0] === dayMark7Str  && (task.progress !== "Completed")) {
                     tasksDueIn7Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark5.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("5 Days Before"))) {
+                if (dueDate.toISOString().split('T')[0] === dayMark5Str && (task.progress !== "Completed")) {
                     tasksDueIn5Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark3.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("3 Days Before"))) {
+                if (dueDate.toISOString().split('T')[0] === dayMark3Str && (task.progress !== "Completed")) {
                     tasksDueIn3Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark1.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("1 Day Before"))) {
+                if (dueDate.toISOString().split('T')[0] === dayMark1Str && (task.progress !== "Completed")) {
                     tasksDueIn1Day.push(task);
                 }
             }
-
-            let currentChunk = [];
-            // Less than 25 tasks
-            if((tasksDueIn7Days.length + tasksDueIn5Days.length + tasksDueIn3Days.length +tasksDueIn1Day.length) < MAX_FIELDS_PER_EMBED){
-                console.log("Less than 25 tasks to push...");
-
-                for(const task of tasksDueIn7Days){
-                    // if(guildReminderSelections[guildId].includes("7 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn5Days){
-                    // if(guildReminderSelections[guildId].includes("5 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn3Days){
-                    // if(guildReminderSelections[guildId].includes("3 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn1Day){
-                    // if(guildReminderSelections[guildId].includes("1 Day Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-            }
-            // More than 25 tasks
-            else{
-                console.log("More than 25 tasks...");
-                //Push all tasks into 1 array to split them into bigger chunks
-                for(const task of tasksDueIn7Days){
-                    // if(guildReminderSelections[guildId].includes("7 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn5Days){
-                    // if(guildReminderSelections[guildId].includes("5 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn3Days){
-                    // if(guildReminderSelections[guildId].includes("3 Days Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                for(const task of tasksDueIn1Day){
-                    // if(guildReminderSelections[guildId].includes("1 Day Before")){
-                        currentChunk.push(task);
-                    // }
-                }
-                chunks.push(splitTasksIntoChunks(currentChunk, MAX_FIELDS_PER_EMBED));
-            }
-
-            chunks.push(currentChunk);
-
-            console.log("Chunks: ", chunks);
             
-            // If there are less than 25 total tasks
-            if((tasksDueIn7Days.length + tasksDueIn5Days.length + tasksDueIn3Days.length +tasksDueIn1Day.length) < MAX_FIELDS_PER_EMBED){
-                // Compose and send message to user for all of the
-                // different task due date lengths
-                const embed = new EmbedBuilder()
-                    .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
-                    // .setDescription(`# Project: ${project.nameProject}`)
-                    .setColor(0xFDDC87)
-                    // .setFooter({ text: 'Have a great day!' })
-                    .setTimestamp();
+            // Compose and send message to user for all of the
+            // different task due date lengths
+            const embed = new EmbedBuilder()
+                .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
+                // .setDescription(`# Project: ${project.nameProject}`)
+                .setColor(0xFDDC87)
+                // .setFooter({ text: 'Have a great day!' })
+                .setTimestamp();
 
-                    // Add the tasks for each amount of days that the user has selected to be reminded for
-                    // 7 Days
-                    if(guildReminderSelections[guildId].includes("7 Days Before")){
+                // Add the tasks for each amount of days that the user has selected to be reminded for
+                // 7 Days
+                if(guildReminderSelections[guildId].includes("7 Days Before")){
 
-                        embed.addFields({name: `__**Tasks Due in 7 Days:**__`, value: ` `});
+                    embed.addFields({name: `__**Tasks Due in 7 Days:**__`, value: ` `});
 
-                        for (const task of tasksDueIn7Days) {
-                            embed.addFields(
-                                {
-                                    name: `Task: ${task.taskTitle}`,
-                                    value: (!task.taskDescription)
-                                        ? "No Task Description\nDue in 7 days\n\n"
-                                        : `${task.taskDescription}\nDue in 7 days\n\n`
-                                }
-                            );
-                        }
-        
+                    for (const task of tasksDueIn7Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 7 days\n\n"
+                                    : `${task.taskDescription}\nDue in 7 days\n\n`
+                            }
+                        );
                     }
-
-                    // 5 Days
-                    if(guildReminderSelections[guildId].includes("5 Days Before")){
-
-                        embed.addFields({name: `__**Tasks Due in 5 Days:**__`, value: ` `});
-
-                        for (const task of tasksDueIn5Days) {
-                            embed.addFields(
-                                {
-                                    name: `Task: ${task.taskTitle}`,
-                                    value: (!task.taskDescription)
-                                        ? "No Task Description\nDue in 5 days\n\n"
-                                        : `${task.taskDescription}\nDue in 5 days\n\n`
-                                }
-                            );
-                        }
-                    }
-
-                    // 3 Days
-                    if(guildReminderSelections[guildId].includes("3 Days Before")){
-
-                    embed.addFields({name: `__**Tasks Due in 3 Days:**__`, value: ` `});
-
-                        for (const task of tasksDueIn3Days) {
-                            embed.addFields(
-                                {
-                                    name: `Task: ${task.taskTitle}`,
-                                    value: (!task.taskDescription)
-                                        ? "No Task Description\nDue in 3 days\n\n"
-                                        : `${task.taskDescription}\nDue in 3 days\n\n`
-                                }
-                            );
-                        }
-                    }
-
-                    // 1 Day
-                    if(guildReminderSelections[guildId].includes("1 Day Before")){
-
-                        embed.addFields({name: `__**Tasks Due in 1 Day:**__`, value: ` `});
-
-                        for (const task of tasksDueIn1Day) {
-                            embed.addFields(
-                                {
-                                    name: `Task: ${task.taskTitle}`,
-                                    value: (!task.taskDescription)
-                                        ? "No Task Description\nDue in 1 day\n\n"
-                                        : `${task.taskDescription}\nDue in 1 day\n\n`
-                                }
-                            );
-                        }
-                    }
-
-                // Send the message to the channel that has been selected
-                try{
-                    const guild = await client.guilds.fetch(guildId).catch(() => null);
-                    const channel = await guild.channels.fetch(botChannelIds[guildId]).catch(() => null);
-
-                    await channel.send({ embeds: [embed] });
+    
                 }
-                catch(error){
-                    console.error(`Failed to send message to guild ${guildId}:`, error);
+
+                // 5 Days
+                if(guildReminderSelections[guildId].includes("5 Days Before")){
+
+                    embed.addFields({name: `__**Tasks Due in 5 Days:**__`, value: ` `});
+
+                    for (const task of tasksDueIn5Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 5 days\n\n"
+                                    : `${task.taskDescription}\nDue in 5 days\n\n`
+                            }
+                        );
+                    }
                 }
+
+                // 3 Days
+                if(guildReminderSelections[guildId].includes("3 Days Before")){
+
+                embed.addFields({name: `__**Tasks Due in 3 Days:**__`, value: ` `});
+
+                    for (const task of tasksDueIn3Days) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 3 days\n\n"
+                                    : `${task.taskDescription}\nDue in 3 days\n\n`
+                            }
+                        );
+                    }
+                }
+
+                // 1 Day
+                if(guildReminderSelections[guildId].includes("1 Day Before")){
+
+                    embed.addFields({name: `__**Tasks Due in 1 Day:**__`, value: ` `});
+
+                    for (const task of tasksDueIn1Day) {
+                        embed.addFields(
+                            {
+                                name: `Task: ${task.taskTitle}`,
+                                value: (!task.taskDescription)
+                                    ? "No Task Description\nDue in 1 day\n\n"
+                                    : `${task.taskDescription}\nDue in 1 day\n\n`
+                            }
+                        );
+                    }
+                }
+
+            // Send the message to the channel that has been selected
+            try{
+                const guild = await client.guilds.fetch(guildId).catch(() => null);
+                const channel = await guild.channels.fetch(botChannelIds[guildId]).catch(() => null);
+
+                await channel.send({ embeds: [embed] });
             }
-            // More than 25 total tasks
-            else{
-                // const embedBeginning = new EmbedBuilder()
-                //     .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
-                //     // .setDescription(`# Project: ${project.nameProject}`)
-                //     .setColor(0xFDDC87)
-
-                const embedArray = [];
-
-                for(const chunk in chunks){
-                    const currentEmbed = new EmbedBuilder()
-                        .setColor(0xFDDC87)
-
-                    for(const task in chunk){
-                        currentEmbed.push
-                    }
-                }
+            catch(error){
+                console.error(`Failed to send message to guild ${guildId}:`, error);
             }
         }
     }
