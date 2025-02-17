@@ -357,16 +357,16 @@ cron.schedule('* * * * *', async () => {
             for(const task of tasks) {
                 const dueDate = new Date(task.dueDateTime.split('T')[0]);
 
-                if ((dueDate.getTime() === dayMark7.getTime()) && (task.progress != "Completed")) {
+                if ((dueDate.getTime() === dayMark7.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("7 Days Before"))) {
                     tasksDueIn7Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark5.getTime()) && (task.progress != "Completed")) {
+                if ((dueDate.getTime() === dayMark5.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("5 Days Before"))) {
                     tasksDueIn5Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark3.getTime()) && (task.progress != "Completed")) {
+                if ((dueDate.getTime() === dayMark3.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("3 Days Before"))) {
                     tasksDueIn3Days.push(task);
                 }
-                if ((dueDate.getTime() === dayMark1.getTime()) && (task.progress != "Completed")) {
+                if ((dueDate.getTime() === dayMark1.getTime()) && (task.progress != "Completed") && (guildReminderSelections[guildId].includes("1 Day Before"))) {
                     tasksDueIn1Day.push(task);
                 }
             }
@@ -402,24 +402,24 @@ cron.schedule('* * * * *', async () => {
                 console.log("More than 25 tasks...");
                 //Push all tasks into 1 array to split them into bigger chunks
                 for(const task of tasksDueIn7Days){
-                    if(guildReminderSelections[guildId].includes("7 Days Before")){
+                    // if(guildReminderSelections[guildId].includes("7 Days Before")){
                         currentChunk.push(task);
-                    }
+                    // }
                 }
                 for(const task of tasksDueIn5Days){
-                    if(guildReminderSelections[guildId].includes("5 Days Before")){
+                    // if(guildReminderSelections[guildId].includes("5 Days Before")){
                         currentChunk.push(task);
-                    }
+                    // }
                 }
                 for(const task of tasksDueIn3Days){
-                    if(guildReminderSelections[guildId].includes("3 Days Before")){
+                    // if(guildReminderSelections[guildId].includes("3 Days Before")){
                         currentChunk.push(task);
-                    }
+                    // }
                 }
                 for(const task of tasksDueIn1Day){
-                    if(guildReminderSelections[guildId].includes("1 Day Before")){
+                    // if(guildReminderSelections[guildId].includes("1 Day Before")){
                         currentChunk.push(task);
-                    }
+                    // }
                 }
                 chunks.push(splitTasksIntoChunks(currentChunk, MAX_FIELDS_PER_EMBED));
             }
@@ -428,17 +428,16 @@ cron.schedule('* * * * *', async () => {
 
             console.log("Chunks: ", chunks);
             
-            const embed = new EmbedBuilder()
-                    .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
-                    // .setDescription(`# Project: ${project.nameProject}`)
-                    .setColor(0xFDDC87)
-                    // .setFooter({ text: 'Have a great day!' })
-                    // .setTimestamp();
-            
             // If there are less than 25 total tasks
             if((tasksDueIn7Days.length + tasksDueIn5Days.length + tasksDueIn3Days.length +tasksDueIn1Day.length) < MAX_FIELDS_PER_EMBED){
                 // Compose and send message to user for all of the
                 // different task due date lengths
+                const embed = new EmbedBuilder()
+                    .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
+                    // .setDescription(`# Project: ${project.nameProject}`)
+                    .setColor(0xFDDC87)
+                    // .setFooter({ text: 'Have a great day!' })
+                    .setTimestamp();
 
                     // Add the tasks for each amount of days that the user has selected to be reminded for
                     // 7 Days
@@ -521,8 +520,23 @@ cron.schedule('* * * * *', async () => {
                     console.error(`Failed to send message to guild ${guildId}:`, error);
                 }
             }
+            // More than 25 total tasks
             else{
+                // const embedBeginning = new EmbedBuilder()
+                //     .setDescription(`# 📢 **Daily Reminder**\n__## Project: ${project.nameProject}__`)
+                //     // .setDescription(`# Project: ${project.nameProject}`)
+                //     .setColor(0xFDDC87)
 
+                const embedArray = [];
+
+                for(const chunk in chunks){
+                    const currentEmbed = new EmbedBuilder()
+                        .setColor(0xFDDC87)
+
+                    for(const task in chunk){
+                        currentEmbed.push
+                    }
+                }
             }
         }
     }
