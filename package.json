@@ -4,9 +4,9 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.js"
   },
-  "author":"Connor Bennett"
+  "author":"Connor Bennett",
   "dependencies": {
     "@discordjs/rest": "^2.4.2",
     "cors": "^2.8.5",
