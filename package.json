@@ -1,4 +1,12 @@
 {
+  "name": "Ganttify Discord Bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+  },
+  "author":"Connor Bennett"
   "dependencies": {
     "@discordjs/rest": "^2.4.2",
     "cors": "^2.8.5",
