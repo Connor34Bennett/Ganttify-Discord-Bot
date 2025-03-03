@@ -26,11 +26,6 @@ server.use("/api", apiRouter);
 server.all(`/`, (req, res) => {
     res.send(`Result: [OK]`);
 });
-
-function keepAlive() {
-    server.listen(PORT, () => {
+server.listen(PORT, () => {
         console.log("Server is now ready!");
     });
-}
-
-module.exports = keepAlive;
