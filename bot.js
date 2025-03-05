@@ -282,25 +282,27 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Scheduled to check for tasks due every morning at 10am UTC
-cron.schedule('0 10 * * *', async () => {  
+cron.schedule('*/30 * * * * *', async () => {
+// cron.schedule('* * * * *', async () => {  
+// cron.schedule('0 10 * * *', async () => {  
     console.log("CRON.SCHEDULE...");
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
     const dayMark7 = new Date(currentDate);
-    dayMark7.setDate(currentDate.getDate() + 7);
+    dayMark7.setUTCDate(currentDate.getUTCDate() + 7);
     dayMark7.setUTCHours(0, 0, 0, 0);
 
     const dayMark5 = new Date(currentDate);
-    dayMark5.setDate(currentDate.getDate() + 5);
+    dayMark5.setUTCDate(currentDate.getUTCDate() + 5);
     dayMark5.setUTCHours(0, 0, 0, 0);
 
     const dayMark3 = new Date(currentDate);
-    dayMark3.setDate(currentDate.getDate() + 3);
+    dayMark3.setUTCDate(currentDate.getUTCDate() + 3);
     dayMark3.setUTCHours(0, 0, 0, 0);
 
     const dayMark1 = new Date(currentDate);
-    dayMark1.setDate(currentDate.getDate() + 1);
+    dayMark1.setUTCDate(currentDate.getUTCDate() + 1);
     dayMark1.setUTCHours(0, 0, 0, 0);
 
     // Runs through every server in order to send reminders
@@ -338,6 +340,10 @@ cron.schedule('0 10 * * *', async () => {
 
 
                 console.log("dayMark7: ", dayMark7);
+                console.log("dayMark5: ", dayMark5);
+                console.log("dayMark3: ", dayMark3);
+                console.log("dayMark1: ", dayMark1);
+
 
                 if (dueDate.toISOString().split('T')[0] === dayMark7Str  && (task.progress !== "Completed")) {
                     tasksDueIn7Days.push(task);
@@ -352,6 +358,12 @@ cron.schedule('0 10 * * *', async () => {
                     tasksDueIn1Day.push(task);
                 }
             }
+
+            console.log("Tasks due in 7 days: " + tasksDueIn7Days);
+            console.log("Tasks due in 5 days: " + tasksDueIn5Days);
+            console.log("Tasks due in 3 days: " + tasksDueIn3Days);
+            console.log("Tasks due in 1 day: " + tasksDueIn1Day);
+
             
             // Compose and send message to user for all of the
             // different task due date lengths
@@ -447,4 +459,3 @@ cron.schedule('0 10 * * *', async () => {
 });
 
 client.login(DISCORD_TOKEN);
-keepAlive();

@@ -79,6 +79,9 @@ router.get('/getTasksById/:taskIds', async (req, res) => {
     const db = client.db("ganttify");
     const taskCollection = db.collection("tasks");
 
+    console.log("Checking ID's before conversion:", taskIdArray);
+    // const objectId = new ObjectId(id);
+
     const tasks = await taskCollection.find({
       _id: { $in: taskIdArray.map(id => new ObjectId(id)) }
     }).toArray();
