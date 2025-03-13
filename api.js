@@ -4,9 +4,10 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const url = process.env.MONGODB_URI;
 const file = require("fs");
- 
+
 const router = express.Router();
 
+// Connect client to DB
 let client;
 (async () => {
   try {
@@ -18,25 +19,7 @@ let client;
   }
 })();
 
-// -----------------> Read specific projects <-----------------//
-  router.post("/readspecificprojects", async (req, res) => {
-    const { projectId } = req.body; // Assuming projectIds is an array of _id values
-  
-    try {
-      const db = client.db("ganttify");
-      const projectCollection = db.collection("projects");
-  
-      const projects = await projectCollection.find({
-        _id: { $in: projectId.map(id => new ObjectId(id)) }
-      }).toArray();
-  
-      res.status(200).json(projects);
-    } catch (error) {
-      console.error("Error finding projects:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
+// ---------> Fetch the project from the invite link <-----------//
   router.get("/get-project-by-link/:inviteLink", async (req, res) => {
     const { inviteLink } = req.params;
 
@@ -66,6 +49,7 @@ let client;
     }
 });
 
+// ---------> Fecth an array of tasks by an array of task ids <-----------//
 router.get('/getTasksById/:taskIds', async (req, res) => {
   try {
     const { taskIds } = req.params;

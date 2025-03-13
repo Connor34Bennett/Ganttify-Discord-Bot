@@ -11,16 +11,19 @@ const { DISCORD_TOKEN, CLIENT_ID, MONGODB_URI, PORT } = process.env;
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
+// Sets desinged to hold things such as serverId's, channelId's, etc.
 const guildReminderSelections = {};
 const botGuildIds = new Set();
 const botChannelIds = {};
 const projectsAddedToServers = {};
 
+// Function that helps update the visuals for the reminder time 
 function getActionRows(userSelections = []) {
     const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
     const row = [];
 
     options.forEach((option, index) => {
+        // Determine which checkbox to use
         let checkBox;
         if(userSelections.includes(option)){
             checkBox = '☑️';
@@ -29,6 +32,7 @@ function getActionRows(userSelections = []) {
             checkBox = '⬜️';
         }
         
+        //Push the appropriate button to the row
         row.push(
             new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -74,9 +78,9 @@ const commands = [
     },
 ];
 
-// Register Slash Commands
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
+// Register Slash Commands
 async function registerCommands(guildId){
     try {
         console.log('Refreshing slash commands...');
@@ -90,9 +94,8 @@ async function registerCommands(guildId){
     }
 }
 
-
-
 client.once('ready', async () => {
+    // Get all the server Id's then add them to the set (intialized at the top of file)
     const guilds = await client.guilds.fetch();
 
     guilds.forEach((guild) => {
@@ -161,6 +164,7 @@ client.on('guildCreate', async (guild) => {
             .setFooter({ text: 'Have a great day!' })
             .setTimestamp();
 
+        // Find the server/channel Id then send the welcome message from the bot
         const guildId = guild.id;
         const channel = await guild.channels.fetch(channelId).catch(() => null);
 
@@ -172,30 +176,37 @@ client.on('guildCreate', async (guild) => {
     }
 });
 
+// Set the functionality for each slash command
 client.on('interactionCreate', async (interaction) => {
     try {
         // If the interaction is a slash command
         if (interaction.isChatInputCommand()) {
             const { commandName } = interaction;
 
+            // Set Channel command
             if (commandName === 'setchannel') {
                 const { customId, guildId } = interaction;
                 const value = customId;
                 const selectedChannel = interaction.options.getChannel('channel');
                 const channelId = selectedChannel.id;
 
+                // If the selected channel isnt a valid text/news channel
                 if (!selectedChannel || !(selectedChannel.type === 0 || selectedChannel.type === 5)) {
                     return interaction.reply({ content: 'Please select a valid text or news channel.'});
                 }
 
+                // If the bot lacks permissions to send messages in the selected channel
                 if (!selectedChannel.permissionsFor(interaction.guild.members.me).has('SEND_MESSAGES')) {
                     return interaction.reply({ content: 'I do not have permission to send messages in that channel.'});
                 }
 
+                // If a channel is already selected for the server
+                // delete the previously selected channel
                 if (botChannelIds[guildId]) {
                     delete botChannelIds[guildId];
                 }
 
+                // Add the channel to the set and send the message
                 botChannelIds[guildId] = channelId;
                 await interaction.reply('Channel Selected!');
             }
@@ -207,10 +218,12 @@ client.on('interactionCreate', async (interaction) => {
 
                 const value = customId;
 
+                // Initialize the server id in the set if it doesnt exist
                 if (!guildReminderSelections[guildId]) {
                     guildReminderSelections[guildId] = [];
                 }
 
+                // Reply to the user with the selection message
                 await interaction.reply({
                     content: 'Select your reminder options:',
                     components: getActionRows(guildReminderSelections[interaction.guildId]),
@@ -229,11 +242,13 @@ client.on('interactionCreate', async (interaction) => {
 
                 const encodedInviteLink = encodeURIComponent(inviteLink);
 
+                // Fetch the project 
                 const response = await fetch(buildPath(`api/get-project-by-link/${encodedInviteLink}`), {
                     method: 'GET',
                 });
                 const project = await response.json();
 
+                // If the project exists, add the project to the set
                 if(project){
                     projectsAddedToServers[guildId].add(project);
                 
@@ -289,6 +304,7 @@ cron.schedule('*/30 * * * * *', async () => {
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
+    //Marking days for the reminder times
     const dayMark7 = new Date(currentDate);
     dayMark7.setUTCDate(currentDate.getUTCDate() + 7);
     dayMark7.setUTCHours(0, 0, 0, 0);
@@ -337,14 +353,8 @@ cron.schedule('*/30 * * * * *', async () => {
                 const dayMark5Str = dayMark5.toISOString().split('T')[0];
                 const dayMark3Str = dayMark3.toISOString().split('T')[0];
                 const dayMark1Str = dayMark1.toISOString().split('T')[0];
-
-
-                console.log("dayMark7: ", dayMark7);
-                console.log("dayMark5: ", dayMark5);
-                console.log("dayMark3: ", dayMark3);
-                console.log("dayMark1: ", dayMark1);
-
-
+                
+                //Add the tasks to their specific arrays
                 if (dueDate.toISOString().split('T')[0] === dayMark7Str  && (task.progress !== "Completed")) {
                     tasksDueIn7Days.push(task);
                 }
@@ -358,12 +368,6 @@ cron.schedule('*/30 * * * * *', async () => {
                     tasksDueIn1Day.push(task);
                 }
             }
-
-            console.log("Tasks due in 7 days: " + tasksDueIn7Days);
-            console.log("Tasks due in 5 days: " + tasksDueIn5Days);
-            console.log("Tasks due in 3 days: " + tasksDueIn3Days);
-            console.log("Tasks due in 1 day: " + tasksDueIn1Day);
-
             
             // Compose and send message to user for all of the
             // different task due date lengths

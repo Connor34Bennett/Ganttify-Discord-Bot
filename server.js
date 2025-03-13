@@ -10,6 +10,7 @@ server.set('port', PORT);
 server.use(express.json());
 server.use(cors());
 
+// Connect client to DB
 let client;
 (async () => {
   try {
@@ -26,6 +27,7 @@ server.use("/api", apiRouter);
 server.all(`/`, (req, res) => {
     res.send(`Result: [OK]`);
 });
+
 server.listen(PORT, () => {
         console.log("Server is now ready!");
     });
