@@ -17,7 +17,7 @@ const botGuildIds = new Set();
 const botChannelIds = {};
 const projectsAddedToServers = {};
 
-// Function that helps update the visuals for the reminder time 
+// Function that helps update the visuals for the reminder time
 function getActionRows(userSelections = []) {
     const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
     const row = [];
@@ -463,3 +463,4 @@ cron.schedule('*/30 * * * * *', async () => {
 });
 
 client.login(DISCORD_TOKEN);
+keepAlive();
