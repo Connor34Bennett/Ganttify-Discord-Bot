@@ -28,6 +28,8 @@ server.all(`/`, (req, res) => {
     res.send(`Result: [OK]`);
 });
 
-server.listen(PORT, () => {
-        console.log("Server is now ready!");
+function keepAlive(){
+    server.listen(PORT, () => {
+      console.log("Server is now ready!");
     });
+}

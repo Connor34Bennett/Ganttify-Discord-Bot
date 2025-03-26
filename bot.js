@@ -1,23 +1,60 @@
 require('dotenv').config();
-const keepAlive = require('./server.js');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const {MongoClient, ObjectId} = require('mongodb');
+const express = require('express');
+const server = express();
+const apiRouter = require("./api");
+const cors = require('cors');
+const PORT = process.env.PORT || 3000;
+const url = process.env.MONGODB_URI;
+
+server.set('port', PORT);
+server.use(express.json());
+server.use(cors());
+
+// Connect client to DB
+let mongoClient;
+(async () => {
+  try {
+    mongoClient = new MongoClient(url);
+    await mongoClient.connect();
+    } catch (err) {
+    console.error('MongoDB connection error:', err);
+  }
+})();
+
+server.use("/api", apiRouter);
+
+server.all(`/`, (req, res) => {
+    res.send(`Result: [OK]`);
+});
+
+function keepAlive(){
+    server.listen(PORT, () => {
+         console.log("Server is now ready...");
+    });
+}
+
+const { Client, PermissionsBitField, Permissions, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageManager, Embed, Collection } = require('discord.js');
 const { REST, Routes } = require('discord.js');
-const { MongoClient, ObjectId } = require('mongodb');
 const buildPath = require('./buildPath.js');
 const cron = require('node-cron');
 
-const { DISCORD_TOKEN, CLIENT_ID, MONGODB_URI, PORT } = process.env;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID  = process.env.CLIENT_ID;
+const JWT_SECRET = process.env.JWT_SECRET;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
+
 // Sets desinged to hold things such as serverId's, channelId's, etc.
 const guildReminderSelections = {};
 const botGuildIds = new Set();
 const botChannelIds = {};
 const projectsAddedToServers = {};
 
-// Function that helps update the visuals for the reminder time 
+// Function that helps update the visuals for the reminder time
 function getActionRows(userSelections = []) {
     const options = ['7 Days Before', '5 Days Before', '3 Days Before', '1 Day Before'];
     const row = [];
@@ -31,7 +68,7 @@ function getActionRows(userSelections = []) {
         else{
             checkBox = '⬜️';
         }
-        
+
         //Push the appropriate button to the row
         row.push(
             new ActionRowBuilder().addComponents(
@@ -196,7 +233,7 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 // If the bot lacks permissions to send messages in the selected channel
-                if (!selectedChannel.permissionsFor(interaction.guild.members.me).has('SEND_MESSAGES')) {
+                if (!interaction.member.permissions.has(PermissionsBitField.Flags.SendMessages)) {
                     return interaction.reply({ content: 'I do not have permission to send messages in that channel.'});
                 }
 
@@ -237,12 +274,12 @@ client.on('interactionCreate', async (interaction) => {
                 if (!projectsAddedToServers[guildId]) {
                     projectsAddedToServers[guildId] = new Set();
                 }
-                
+
                 const inviteLink = interaction.options.getString('invite_link');
 
                 const encodedInviteLink = encodeURIComponent(inviteLink);
 
-                // Fetch the project 
+                // Fetch the project
                 const response = await fetch(buildPath(`api/get-project-by-link/${encodedInviteLink}`), {
                     method: 'GET',
                 });
@@ -251,7 +288,7 @@ client.on('interactionCreate', async (interaction) => {
                 // If the project exists, add the project to the set
                 if(project){
                     projectsAddedToServers[guildId].add(project);
-                
+
                     await interaction.reply({
                         content: 'Thank you, your project has been added!',
                     });
@@ -263,7 +300,7 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
             }
-        } 
+        }
         // Interaction is a Button Interaction
         else if (interaction.isButton()) {
             const { customId, guildId } = interaction;
@@ -281,7 +318,7 @@ client.on('interactionCreate', async (interaction) => {
                     content: `Your current selections: ${guildReminderSelections[guildId].join(', ') || 'None'}`,
                     components: getActionRows(guildReminderSelections[guildId]),
                 });
-            } 
+            }
             // Add selection if not present
             else {
                 guildReminderSelections[guildId].push(value);
@@ -297,10 +334,9 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Scheduled to check for tasks due every morning at 10am UTC
-cron.schedule('*/30 * * * * *', async () => {
-// cron.schedule('* * * * *', async () => {  
-// cron.schedule('0 10 * * *', async () => {  
-    console.log("CRON.SCHEDULE...");
+// cron.schedule('*/30* * * * *', async () => {
+// cron.schedule('* * * * *', async () => {
+cron.schedule('0 10 * * *', async () => {
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
@@ -353,7 +389,7 @@ cron.schedule('*/30 * * * * *', async () => {
                 const dayMark5Str = dayMark5.toISOString().split('T')[0];
                 const dayMark3Str = dayMark3.toISOString().split('T')[0];
                 const dayMark1Str = dayMark1.toISOString().split('T')[0];
-                
+
                 //Add the tasks to their specific arrays
                 if (dueDate.toISOString().split('T')[0] === dayMark7Str  && (task.progress !== "Completed")) {
                     tasksDueIn7Days.push(task);
@@ -368,7 +404,7 @@ cron.schedule('*/30 * * * * *', async () => {
                     tasksDueIn1Day.push(task);
                 }
             }
-            
+
             // Compose and send message to user for all of the
             // different task due date lengths
             const embed = new EmbedBuilder()
@@ -394,7 +430,7 @@ cron.schedule('*/30 * * * * *', async () => {
                             }
                         );
                     }
-    
+
                 }
 
                 // 5 Days
@@ -463,3 +499,4 @@ cron.schedule('*/30 * * * * *', async () => {
 });
 
 client.login(DISCORD_TOKEN);
+keepAlive();
