@@ -33,3 +33,5 @@ function keepAlive(){
       console.log("Server is now ready!");
     });
 }
+
+module.exports = keepAlive();
